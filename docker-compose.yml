@@ -1,0 +1,38 @@
+version: '3.8'
+services:
+  lanchain1:
+    container_name: lanchain-1
+    restart: on-failure
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    networks:
+      - lanchain
+
+  lanchain2:
+    container_name: lanchain-2
+    restart: on-failure
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    networks:
+      - lanchain
+
+  lanchain3:
+    container_name: lanchain-3
+    restart: on-failure
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    networks:
+      - lanchain
+
+networks:
+  lanchain:
+    driver: bridge

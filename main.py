@@ -1,29 +1,31 @@
-'''
-This is the main file of the application.
-'''
-import tkinter as tk
-from network_interface import NetworkInterface
-from packet_receiver import PacketReceiver
-class Application(tk.Tk):
-    def __init__(self):
-        super().__init__()
-        self.title("Network Traffic Application")
-        self.network_interface = NetworkInterface()
-        self.packet_receiver = PacketReceiver()
-        # Create GUI elements
-        self.label = tk.Label(self, text="Network Traffic Application")
-        self.label.pack()
-        self.start_button = tk.Button(self, text="Start", command=self.start)
-        self.start_button.pack()
-        self.stop_button = tk.Button(self, text="Stop", command=self.stop)
-        self.stop_button.pack()
-    def start(self):
-        self.network_interface.attach_to_interface()
-        self.network_interface.start_listening()
-        self.packet_receiver.start_receiving()
-    def stop(self):
-        self.network_interface.stop_listening()
-        self.packet_receiver.stop_receiving()
+from netfilterqueue import NetfilterQueue
+from scapy.all import IP, TCP, Ether, Raw
+import subprocess
+import struct
+
+def process_packet(packet):
+    pkt = IP(packet.get_payload())
+    
+    if pkt.haslayer(TCP):
+        # Modifique o conteúdo do payload para adicionar dados personalizados.
+        custom_header = b"payloadcustomizado"
+        custom_packet = IP(src=pkt[IP].src, dst=pkt[IP].dst) / TCP(sport=pkt[TCP].sport, dport=pkt[TCP].dport) / custom_header / pkt[TCP].payload
+        pkt[IP] = custom_packet[IP]
+        pkt[TCP] = custom_packet[TCP]
+        del pkt[IP].chksum
+        del pkt[TCP].chksum
+        
+        # Enviar o pacote modificado de volta para a rede.
+        packet.set_payload(bytes(pkt))
+    
+    packet.accept()
+
 if __name__ == "__main__":
-    app = Application()
-    app.mainloop()
+    subprocess.run("/sbin/iptables -A INPUT -j NFQUEUE --queue-num 0")
+    subprocess.run("/sbin/iptables -A OUTPUT -j NFQUEUE --queue-num 0")
+    nfqueue = NetfilterQueue()
+    nfqueue.bind(0, process_packet)  # 0 é o número da fila
+    try:
+        nfqueue.run()
+    except KeyboardInterrupt:
+        nfqueue.unbind()
