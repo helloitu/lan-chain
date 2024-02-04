@@ -7,6 +7,7 @@ from ChatSimulator import ChatSimulator
 killed = []
 def block(who):
     if who not in killed:
+        socket.gethostbyname(who)
         print(os.system(f"sudo iptables -I INPUT -s {who} -j DROP"))
         print(os.system(f"sudo iptables -I OUTPUT -d {who}  -j DROP"))
         killed.append(who)
@@ -18,7 +19,7 @@ def process_packet(packet):
                 if pkt.haslayer(Raw):
                     if 'lanchain' in pkt[Raw].load.decode('utf-8', 'ignore'):
                         print(pkt[Raw].load.decode('utf-8', 'ignore'))
-                        if pkt[Raw].load.decode('utf-8', 'ignore').split('-')[2] == '1': block(f"lanchain-{pkt[Raw].load.decode('utf-8', 'ignore').split('-')[1]}")
+                        if pkt[Raw].load.decode('utf-8', 'ignore').split('-')[2] == '1': block(pkt[IP].src)
 
     packet.set_payload(bytes(pkt))
     packet.accept()
